@@ -1,14 +1,684 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import Icon from "@/components/ui/icon";
 
-const Index = () => {
+const HERO_IMG = "https://cdn.poehali.dev/projects/d9915bc8-64e5-4633-bfa0-1c2e0e596eb1/files/fc498c24-d9f0-4c50-a102-9e286b881d03.jpg";
+const PRODUCTS_IMG = "https://cdn.poehali.dev/projects/d9915bc8-64e5-4633-bfa0-1c2e0e596eb1/files/bcc52d93-08a8-49f7-9c82-5f5589ea5f87.jpg";
+const ABOUT_IMG = "https://cdn.poehali.dev/projects/d9915bc8-64e5-4633-bfa0-1c2e0e596eb1/files/86f4959b-f9a6-42f7-8720-1d2294fc45ae.jpg";
+
+const products = [
+  { id: 1, name: "Травяной чай «Лесной»", category: "Напитки", price: 490, unit: "50г", emoji: "🌿", tag: "Хит" },
+  { id: 2, name: "Натуральный мёд акации", category: "Продукты", price: 780, unit: "350г", emoji: "🍯", tag: "" },
+  { id: 3, name: "Крем с алоэ вера", category: "Уход", price: 1290, unit: "100мл", emoji: "🌱", tag: "Новинка" },
+  { id: 4, name: "Деревянная расчёска", category: "Аксессуары", price: 650, unit: "шт", emoji: "🪵", tag: "" },
+  { id: 5, name: "Кедровое масло", category: "Уход", price: 960, unit: "50мл", emoji: "🌲", tag: "" },
+  { id: 6, name: "Семена микрозелени", category: "Продукты", price: 340, unit: "100г", emoji: "🌾", tag: "Хит" },
+];
+
+const categories = ["Все", "Напитки", "Продукты", "Уход", "Аксессуары"];
+
+type Section = "home" | "catalog" | "delivery" | "about";
+
+interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  emoji: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  unit: string;
+  emoji: string;
+  tag: string;
+}
+
+function ProductCard({ product, isFav, onFav, onAdd }: {
+  product: Product;
+  isFav: boolean;
+  onFav: () => void;
+  onAdd: () => void;
+}) {
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = () => {
+    onAdd();
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1200);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
+    <div className="rounded-3xl overflow-hidden card-hover"
+      style={{ background: "rgba(245,240,232,0.9)", border: "1px solid rgba(74,124,74,0.12)" }}>
+      <div className="relative p-6 flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg, rgba(74,124,74,0.08), rgba(196,168,130,0.12))", minHeight: 100 }}>
+        <span className="text-5xl">{product.emoji}</span>
+        {product.tag && (
+          <span className="absolute top-3 left-3 font-golos text-xs px-2 py-1 rounded-full font-medium"
+            style={{ background: "var(--green-mid)", color: "var(--cream)" }}>
+            {product.tag}
+          </span>
+        )}
+        <button onClick={onFav}
+          className="absolute top-3 right-3 p-1.5 rounded-full transition-all hover:scale-110"
+          style={{ background: isFav ? "rgba(220,50,50,0.1)" : "rgba(255,255,255,0.6)" }}>
+          <Icon name="Heart" size={14}
+            style={{ color: isFav ? "#dc3232" : "var(--earth-mid)", fill: isFav ? "#dc3232" : "transparent" }} />
+        </button>
+      </div>
+      <div className="p-4">
+        <p className="font-golos text-xs uppercase tracking-wide mb-1" style={{ color: "var(--green-mid)", opacity: 0.8 }}>{product.category}</p>
+        <h3 className="font-cormorant text-lg font-medium leading-tight mb-3" style={{ color: "var(--green-deep)" }}>{product.name}</h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="font-cormorant text-xl font-semibold" style={{ color: "var(--green-deep)" }}>{product.price} ₽</span>
+            <span className="font-golos text-xs ml-1 opacity-50" style={{ color: "var(--earth-dark)" }}>/{product.unit}</span>
+          </div>
+          <button onClick={handleAdd}
+            className="flex items-center gap-1 font-golos text-xs font-medium px-3 py-2 rounded-full transition-all hover:scale-105"
+            style={{
+              background: added ? "var(--green-mid)" : "var(--green-deep)",
+              color: "var(--cream)"
+            }}>
+            {added ? "✓" : <Icon name="Plus" size={14} />}
+            {added ? "Добавлено" : "В корзину"}
+          </button>
+        </div>
       </div>
     </div>
   );
-};
+}
 
-export default Index;
+export default function Index() {
+  const [activeSection, setActiveSection] = useState<Section>("home");
+  const [activeCategory, setActiveCategory] = useState("Все");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [orderDone, setOrderDone] = useState(false);
+  const [form, setForm] = useState({ name: "", phone: "", address: "", comment: "" });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const filteredProducts = activeCategory === "Все"
+    ? products
+    : products.filter(p => p.category === activeCategory);
+
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+  const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) {
+        return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1, emoji: product.emoji }];
+    });
+  };
+
+  const removeFromCart = (id: number) => {
+    setCart(prev => {
+      const item = prev.find(i => i.id === id);
+      if (item && item.quantity > 1) return prev.map(i => i.id === id ? { ...i, quantity: i.quantity - 1 } : i);
+      return prev.filter(i => i.id !== id);
+    });
+  };
+
+  const deleteFromCart = (id: number) => setCart(prev => prev.filter(i => i.id !== id));
+
+  const toggleFavorite = (id: number) => {
+    setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+  };
+
+  const handleOrder = () => {
+    setOrderDone(true);
+    setCart([]);
+    setForm({ name: "", phone: "", address: "", comment: "" });
+    setTimeout(() => { setCheckoutOpen(false); setOrderDone(false); setCartOpen(false); }, 2000);
+  };
+
+  const navItems: { key: Section; label: string }[] = [
+    { key: "home", label: "Главная" },
+    { key: "catalog", label: "Каталог" },
+    { key: "delivery", label: "Доставка" },
+    { key: "about", label: "О нас" },
+  ];
+
+  return (
+    <div className="min-h-screen" style={{ background: "var(--cream)", fontFamily: "'Golos Text', sans-serif" }}>
+
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 right-0 z-40" style={{ background: "rgba(245,240,232,0.92)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(74,124,74,0.12)" }}>
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <button onClick={() => setActiveSection("home")} className="flex items-center gap-2">
+            <span className="text-2xl">🌿</span>
+            <span className="font-cormorant text-2xl font-semibold" style={{ color: "var(--green-deep)" }}>Зелёный Путь</span>
+          </button>
+
+          <nav className="hidden md:flex items-center gap-8">
+            {navItems.map(item => (
+              <button
+                key={item.key}
+                onClick={() => setActiveSection(item.key)}
+                className="font-golos text-sm font-medium transition-colors relative"
+                style={{ color: activeSection === item.key ? "var(--green-mid)" : "var(--green-deep)" }}
+              >
+                {item.label}
+                {activeSection === item.key && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full" style={{ background: "var(--green-mid)" }} />
+                )}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setCartOpen(true); setMobileMenuOpen(false); }}
+              className="relative p-2 rounded-full transition-all hover:scale-105"
+              style={{ background: "rgba(74,124,74,0.1)" }}
+            >
+              <Icon name="ShoppingBag" size={20} style={{ color: "var(--green-deep)" }} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 text-xs w-5 h-5 flex items-center justify-center rounded-full font-golos font-bold"
+                  style={{ background: "var(--green-mid)", color: "var(--cream)" }}>
+                  {cartCount}
+                </span>
+              )}
+            </button>
+            <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(v => !v)}>
+              <Icon name={mobileMenuOpen ? "X" : "Menu"} size={20} style={{ color: "var(--green-deep)" }} />
+            </button>
+          </div>
+        </div>
+
+        {mobileMenuOpen && (
+          <div className="md:hidden px-6 pb-4 flex flex-col gap-3 animate-fade-in" style={{ borderTop: "1px solid rgba(74,124,74,0.12)" }}>
+            {navItems.map(item => (
+              <button key={item.key} onClick={() => { setActiveSection(item.key); setMobileMenuOpen(false); }}
+                className="text-left font-golos py-2 font-medium"
+                style={{ color: activeSection === item.key ? "var(--green-mid)" : "var(--green-deep)" }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </header>
+
+      {/* MAIN CONTENT */}
+      <main className="pt-20">
+
+        {/* ===== HOME ===== */}
+        {activeSection === "home" && (
+          <div>
+            {/* Hero */}
+            <section className="relative min-h-screen flex items-center overflow-hidden">
+              <div className="absolute inset-0">
+                <img src={HERO_IMG} alt="Природный магазин" className="w-full h-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(245,240,232,0.95) 45%, rgba(245,240,232,0.4) 100%)" }} />
+              </div>
+              <div className="relative z-10 max-w-6xl mx-auto px-6 py-24">
+                <div className="max-w-xl animate-fade-up">
+                  <p className="text-sm font-golos font-medium tracking-widest uppercase mb-4" style={{ color: "var(--green-mid)" }}>
+                    Органический магазин
+                  </p>
+                  <h1 className="font-cormorant text-6xl md:text-7xl font-light leading-tight mb-6"
+                    style={{ color: "var(--green-deep)" }}>
+                    Живите<br /><em style={{ color: "var(--green-mid)" }}>в гармонии</em><br />с природой
+                  </h1>
+                  <p className="font-golos text-lg leading-relaxed mb-10" style={{ color: "var(--earth-dark)", opacity: 0.85 }}>
+                    Натуральные продукты, органическая косметика и экологичные аксессуары — всё, что нужно для осознанной жизни.
+                  </p>
+                  <div className="flex flex-wrap gap-4">
+                    <button onClick={() => setActiveSection("catalog")}
+                      className="font-golos font-medium px-8 py-4 rounded-full transition-all hover:scale-105 hover:shadow-lg"
+                      style={{ background: "var(--green-deep)", color: "var(--cream)" }}>
+                      Смотреть каталог
+                    </button>
+                    <button onClick={() => setActiveSection("about")}
+                      className="font-golos font-medium px-8 py-4 rounded-full border-2 transition-all hover:scale-105"
+                      style={{ borderColor: "var(--green-deep)", color: "var(--green-deep)" }}>
+                      О нас
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Values */}
+            <section className="py-20 max-w-6xl mx-auto px-6">
+              <div className="text-center mb-14">
+                <h2 className="font-cormorant text-4xl md:text-5xl font-light mb-4" style={{ color: "var(--green-deep)" }}>
+                  Почему выбирают нас
+                </h2>
+                <div className="leaf-divider mx-auto w-40 mt-4" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {[
+                  { title: "100% органика", desc: "Только сертифицированные натуральные продукты без химии и ГМО", emoji: "🌿" },
+                  { title: "Быстрая доставка", desc: "Доставим свежими в течение 1-2 дней по всей России", emoji: "🚚" },
+                  { title: "Любовь к природе", desc: "Экологичная упаковка, поддержка фермеров и устойчивое производство", emoji: "🌱" },
+                ].map((val) => (
+                  <div key={val.title} className="text-center p-8 rounded-3xl card-hover"
+                    style={{ background: "rgba(74,124,74,0.06)", border: "1px solid rgba(74,124,74,0.12)" }}>
+                    <div className="text-4xl mb-4">{val.emoji}</div>
+                    <h3 className="font-cormorant text-2xl font-medium mb-3" style={{ color: "var(--green-deep)" }}>{val.title}</h3>
+                    <p className="font-golos text-sm leading-relaxed" style={{ color: "var(--earth-dark)", opacity: 0.8 }}>{val.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Featured products */}
+            <section className="py-16" style={{ background: "rgba(74,124,74,0.05)" }}>
+              <div className="max-w-6xl mx-auto px-6">
+                <div className="flex items-center justify-between mb-10">
+                  <h2 className="font-cormorant text-4xl font-light" style={{ color: "var(--green-deep)" }}>Популярное</h2>
+                  <button onClick={() => setActiveSection("catalog")} className="font-golos text-sm font-medium flex items-center gap-1 transition-colors hover:opacity-70"
+                    style={{ color: "var(--green-mid)" }}>
+                    Весь каталог <Icon name="ArrowRight" size={16} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+                  {products.slice(0, 3).map(product => (
+                    <ProductCard key={product.id} product={product}
+                      isFav={favorites.includes(product.id)}
+                      onFav={() => toggleFavorite(product.id)}
+                      onAdd={() => addToCart(product)} />
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* About preview */}
+            <section className="py-20 max-w-6xl mx-auto px-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div className="relative">
+                  <img src={PRODUCTS_IMG} alt="Наши продукты" className="w-full rounded-3xl object-cover"
+                    style={{ height: 400, border: "3px solid rgba(74,124,74,0.15)" }} />
+                  <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full flex items-center justify-center text-3xl"
+                    style={{ background: "var(--green-mid)" }}>🌿</div>
+                </div>
+                <div>
+                  <p className="text-sm font-golos font-medium tracking-widest uppercase mb-3" style={{ color: "var(--green-mid)" }}>Наша история</p>
+                  <h2 className="font-cormorant text-4xl font-light leading-tight mb-5" style={{ color: "var(--green-deep)" }}>
+                    От природы — прямо к вам
+                  </h2>
+                  <p className="font-golos leading-relaxed mb-6" style={{ color: "var(--earth-dark)", opacity: 0.85 }}>
+                    Мы верим, что природа даёт всё необходимое для здоровой и счастливой жизни. Наши продукты — это связь между вами и первозданной чистотой.
+                  </p>
+                  <button onClick={() => setActiveSection("about")}
+                    className="font-golos font-medium px-6 py-3 rounded-full transition-all hover:scale-105"
+                    style={{ background: "var(--earth-mid)", color: "var(--cream)" }}>
+                    Читать подробнее
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ===== CATALOG ===== */}
+        {activeSection === "catalog" && (
+          <section className="min-h-screen py-16 max-w-6xl mx-auto px-6">
+            <div className="mb-10 animate-fade-up">
+              <p className="text-sm font-golos font-medium tracking-widest uppercase mb-2" style={{ color: "var(--green-mid)" }}>Органический магазин</p>
+              <h1 className="font-cormorant text-5xl font-light" style={{ color: "var(--green-deep)" }}>Каталог товаров</h1>
+            </div>
+
+            {favorites.length > 0 && (
+              <div className="mb-6 p-4 rounded-2xl flex items-center gap-3 animate-fade-in"
+                style={{ background: "rgba(74,124,74,0.08)", border: "1px solid rgba(74,124,74,0.2)" }}>
+                <Icon name="Heart" size={16} style={{ color: "var(--green-mid)" }} />
+                <span className="font-golos text-sm" style={{ color: "var(--green-deep)" }}>
+                  В избранном: {favorites.length} {favorites.length === 1 ? "товар" : "товара"}
+                </span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 mb-8">
+              {categories.map(cat => (
+                <button key={cat} onClick={() => setActiveCategory(cat)}
+                  className="font-golos text-sm px-5 py-2 rounded-full border transition-all hover:scale-105"
+                  style={{
+                    background: activeCategory === cat ? "var(--green-deep)" : "transparent",
+                    color: activeCategory === cat ? "var(--cream)" : "var(--green-deep)",
+                    borderColor: activeCategory === cat ? "var(--green-deep)" : "rgba(74,124,74,0.3)"
+                  }}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product}
+                  isFav={favorites.includes(product.id)}
+                  onFav={() => toggleFavorite(product.id)}
+                  onAdd={() => addToCart(product)} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ===== DELIVERY ===== */}
+        {activeSection === "delivery" && (
+          <section className="min-h-screen py-16 max-w-5xl mx-auto px-6">
+            <div className="mb-12 animate-fade-up">
+              <p className="text-sm font-golos font-medium tracking-widest uppercase mb-2" style={{ color: "var(--green-mid)" }}>Информация</p>
+              <h1 className="font-cormorant text-5xl font-light mb-4" style={{ color: "var(--green-deep)" }}>Доставка и оплата</h1>
+              <div className="leaf-divider w-40 mt-4" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              {[
+                {
+                  emoji: "🚀", title: "Экспресс-доставка",
+                  items: ["По Москве — 1-2 дня", "По России — 3-7 дней", "Стоимость от 290 ₽", "Бесплатно от 3 000 ₽"]
+                },
+                {
+                  emoji: "🏪", title: "Самовывоз",
+                  items: ["г. Москва, ул. Лесная, 12", "Пн-Пт: 9:00–20:00", "Сб-Вс: 10:00–18:00", "Бесплатно"]
+                },
+                {
+                  emoji: "💳", title: "Способы оплаты",
+                  items: ["Картой онлайн", "Наличными при получении", "СБП (QR-код)", "Apple Pay / Google Pay"]
+                },
+                {
+                  emoji: "🔄", title: "Возврат",
+                  items: ["В течение 14 дней", "Без объяснения причин", "Полный возврат средств", "Обмен товара"]
+                },
+              ].map(block => (
+                <div key={block.title} className="p-8 rounded-3xl card-hover"
+                  style={{ background: "rgba(74,124,74,0.06)", border: "1px solid rgba(74,124,74,0.12)" }}>
+                  <div className="text-3xl mb-4">{block.emoji}</div>
+                  <h3 className="font-cormorant text-2xl font-medium mb-4" style={{ color: "var(--green-deep)" }}>{block.title}</h3>
+                  <ul className="space-y-2">
+                    {block.items.map(item => (
+                      <li key={item} className="flex items-center gap-2 font-golos text-sm"
+                        style={{ color: "var(--earth-dark)", opacity: 0.85 }}>
+                        <span style={{ color: "var(--green-mid)" }}>✓</span> {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-8 rounded-3xl text-center"
+              style={{ background: "linear-gradient(135deg, var(--green-deep) 0%, var(--green-mid) 100%)", color: "var(--cream)" }}>
+              <div className="text-3xl mb-3">🌿</div>
+              <h3 className="font-cormorant text-3xl font-light mb-2">Экологичная упаковка</h3>
+              <p className="font-golos text-sm opacity-85 max-w-md mx-auto">
+                Все товары упакованы в перерабатываемые и биоразлагаемые материалы. Мы заботимся о природе на каждом шагу.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {/* ===== ABOUT ===== */}
+        {activeSection === "about" && (
+          <section className="min-h-screen py-16">
+            <div className="max-w-6xl mx-auto px-6">
+              <div className="mb-12 animate-fade-up">
+                <p className="text-sm font-golos font-medium tracking-widest uppercase mb-2" style={{ color: "var(--green-mid)" }}>Знакомьтесь</p>
+                <h1 className="font-cormorant text-5xl font-light" style={{ color: "var(--green-deep)" }}>О нас</h1>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start mb-16">
+                <div>
+                  <img src={ABOUT_IMG} alt="О магазине" className="w-full rounded-3xl object-cover"
+                    style={{ height: 420, border: "3px solid rgba(74,124,74,0.15)" }} />
+                </div>
+                <div className="space-y-6">
+                  <div className="p-6 rounded-2xl" style={{ background: "rgba(74,124,74,0.06)" }}>
+                    <h3 className="font-cormorant text-2xl font-medium mb-3" style={{ color: "var(--green-deep)" }}>Наша миссия</h3>
+                    <p className="font-golos leading-relaxed" style={{ color: "var(--earth-dark)", opacity: 0.85 }}>
+                      Мы помогаем людям перейти к более осознанному потреблению, выбирая продукты, которые хороши для здоровья и бережны к планете.
+                    </p>
+                  </div>
+                  <div className="p-6 rounded-2xl" style={{ background: "rgba(196,168,130,0.15)" }}>
+                    <h3 className="font-cormorant text-2xl font-medium mb-3" style={{ color: "var(--green-deep)" }}>Наши ценности</h3>
+                    <p className="font-golos leading-relaxed" style={{ color: "var(--earth-dark)", opacity: 0.85 }}>
+                      Натуральность, прозрачность, уважение к природе и честные отношения с поставщиками — основа всего, что мы делаем.
+                    </p>
+                  </div>
+                  <div className="p-6 rounded-2xl" style={{ background: "rgba(74,124,74,0.06)" }}>
+                    <h3 className="font-cormorant text-2xl font-medium mb-3" style={{ color: "var(--green-deep)" }}>С нами работают</h3>
+                    <p className="font-golos leading-relaxed" style={{ color: "var(--earth-dark)", opacity: 0.85 }}>
+                      Более 50 фермерских хозяйств и небольших производств по всей России. Каждый поставщик проходит строгую проверку.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-16">
+                {[
+                  { num: "5+", label: "Лет работы" },
+                  { num: "200+", label: "Товаров" },
+                  { num: "15K+", label: "Покупателей" },
+                  { num: "50+", label: "Поставщиков" },
+                ].map(stat => (
+                  <div key={stat.label} className="text-center p-6 rounded-2xl"
+                    style={{ background: "rgba(74,124,74,0.06)", border: "1px solid rgba(74,124,74,0.12)" }}>
+                    <div className="font-cormorant text-4xl font-light mb-1" style={{ color: "var(--green-mid)" }}>{stat.num}</div>
+                    <div className="font-golos text-sm" style={{ color: "var(--earth-dark)", opacity: 0.7 }}>{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-8 rounded-3xl text-center"
+                style={{ background: "linear-gradient(135deg, rgba(74,124,74,0.1), rgba(196,168,130,0.15))", border: "1px solid rgba(74,124,74,0.2)" }}>
+                <h3 className="font-cormorant text-3xl font-light mb-3" style={{ color: "var(--green-deep)" }}>Связаться с нами</h3>
+                <p className="font-golos text-sm mb-6" style={{ color: "var(--earth-dark)", opacity: 0.8 }}>
+                  Есть вопросы? Мы всегда рады помочь!
+                </p>
+                <div className="flex flex-wrap justify-center gap-4">
+                  <a href="tel:+78001234567" className="flex items-center gap-2 font-golos font-medium px-6 py-3 rounded-full transition-all hover:scale-105"
+                    style={{ background: "var(--green-deep)", color: "var(--cream)" }}>
+                    <Icon name="Phone" size={16} /> 8 800 123-45-67
+                  </a>
+                  <a href="mailto:hello@zeleniyput.ru" className="flex items-center gap-2 font-golos font-medium px-6 py-3 rounded-full border-2 transition-all hover:scale-105"
+                    style={{ borderColor: "var(--green-deep)", color: "var(--green-deep)" }}>
+                    <Icon name="Mail" size={16} /> Написать письмо
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* FOOTER */}
+      <footer className="py-12 mt-8" style={{ background: "var(--green-deep)", color: "var(--cream)" }}>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-start justify-between gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🌿</span>
+                <span className="font-cormorant text-2xl font-semibold">Зелёный Путь</span>
+              </div>
+              <p className="font-golos text-sm opacity-70 max-w-xs leading-relaxed">
+                Органические продукты и экологичные товары для осознанной жизни
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="font-golos text-xs uppercase tracking-widest opacity-50 mb-3">Навигация</p>
+                {navItems.map(item => (
+                  <button key={item.key} onClick={() => setActiveSection(item.key)}
+                    className="block font-golos text-sm opacity-80 hover:opacity-100 mb-2 transition-opacity">
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <p className="font-golos text-xs uppercase tracking-widest opacity-50 mb-3">Контакты</p>
+                <p className="font-golos text-sm opacity-80 mb-1">8 800 123-45-67</p>
+                <p className="font-golos text-sm opacity-80 mb-1">hello@zeleniyput.ru</p>
+                <p className="font-golos text-sm opacity-80">Москва, ул. Лесная, 12</p>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-white border-opacity-10 pt-6 font-golos text-xs opacity-40 text-center">
+            © 2024 Зелёный Путь. Все права защищены.
+          </div>
+        </div>
+      </footer>
+
+      {/* CART DRAWER */}
+      {cartOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black bg-opacity-40" onClick={() => setCartOpen(false)} />
+          <div className="w-full max-w-md h-full flex flex-col animate-fade-in"
+            style={{ background: "var(--cream)", boxShadow: "-10px 0 40px rgba(45,74,45,0.15)" }}>
+
+            <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "rgba(74,124,74,0.15)" }}>
+              <h2 className="font-cormorant text-2xl font-medium" style={{ color: "var(--green-deep)" }}>
+                Корзина {cartCount > 0 && <span className="text-base font-golos font-normal opacity-60">({cartCount})</span>}
+              </h2>
+              <button onClick={() => setCartOpen(false)} className="p-2 rounded-full hover:bg-black hover:bg-opacity-5 transition-colors">
+                <Icon name="X" size={20} style={{ color: "var(--green-deep)" }} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <div className="text-5xl mb-4">🛒</div>
+                  <p className="font-cormorant text-2xl mb-2" style={{ color: "var(--green-deep)" }}>Корзина пуста</p>
+                  <p className="font-golos text-sm opacity-60">Добавьте товары из каталога</p>
+                  <button onClick={() => { setCartOpen(false); setActiveSection("catalog"); }}
+                    className="mt-6 font-golos font-medium px-6 py-3 rounded-full"
+                    style={{ background: "var(--green-deep)", color: "var(--cream)" }}>
+                    Перейти в каталог
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map(item => (
+                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl"
+                      style={{ background: "rgba(74,124,74,0.06)", border: "1px solid rgba(74,124,74,0.1)" }}>
+                      <div className="text-3xl">{item.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-golos font-medium text-sm truncate" style={{ color: "var(--green-deep)" }}>{item.name}</p>
+                        <p className="font-golos text-sm" style={{ color: "var(--green-mid)" }}>{item.price} ₽</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => removeFromCart(item.id)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-lg leading-none transition-all hover:scale-110"
+                          style={{ background: "rgba(74,124,74,0.15)", color: "var(--green-deep)" }}>
+                          −
+                        </button>
+                        <span className="font-golos font-medium w-5 text-center" style={{ color: "var(--green-deep)" }}>{item.quantity}</span>
+                        <button onClick={() => {
+                          const p = products.find(pr => pr.id === item.id);
+                          if (p) addToCart(p);
+                        }}
+                          className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-lg leading-none transition-all hover:scale-110"
+                          style={{ background: "var(--green-mid)", color: "var(--cream)" }}>
+                          +
+                        </button>
+                      </div>
+                      <button onClick={() => deleteFromCart(item.id)} className="p-1 opacity-40 hover:opacity-80 transition-opacity">
+                        <Icon name="Trash2" size={16} style={{ color: "var(--earth-dark)" }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="p-6 border-t" style={{ borderColor: "rgba(74,124,74,0.15)" }}>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-golos font-medium" style={{ color: "var(--green-deep)" }}>Итого:</span>
+                  <span className="font-cormorant text-2xl font-semibold" style={{ color: "var(--green-deep)" }}>{cartTotal} ₽</span>
+                </div>
+                <button onClick={() => setCheckoutOpen(true)}
+                  className="w-full font-golos font-medium py-4 rounded-full transition-all hover:scale-105 hover:shadow-lg"
+                  style={{ background: "var(--green-deep)", color: "var(--cream)" }}>
+                  Оформить заказ
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CHECKOUT MODAL */}
+      {checkoutOpen && (
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.5)", zIndex: 60 }}>
+          <div className="w-full max-w-md rounded-3xl p-8 animate-scale-in" style={{ background: "var(--cream)" }}>
+            {orderDone ? (
+              <div className="text-center py-8">
+                <div className="text-5xl mb-4">🌿</div>
+                <h3 className="font-cormorant text-3xl font-light mb-2" style={{ color: "var(--green-deep)" }}>Заказ оформлен!</h3>
+                <p className="font-golos text-sm opacity-70">Скоро свяжемся с вами</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-cormorant text-2xl font-medium" style={{ color: "var(--green-deep)" }}>Оформление заказа</h2>
+                  <button onClick={() => setCheckoutOpen(false)} className="p-2 opacity-50 hover:opacity-80 transition-opacity">
+                    <Icon name="X" size={18} style={{ color: "var(--green-deep)" }} />
+                  </button>
+                </div>
+                <div className="space-y-4 mb-6">
+                  {[
+                    { key: "name", label: "Ваше имя", placeholder: "Иван Иванов", type: "text" },
+                    { key: "phone", label: "Телефон", placeholder: "+7 (000) 000-00-00", type: "tel" },
+                    { key: "address", label: "Адрес доставки", placeholder: "г. Москва, ул. ...", type: "text" },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="block font-golos text-xs font-medium mb-1 uppercase tracking-wide opacity-60"
+                        style={{ color: "var(--green-deep)" }}>{field.label}</label>
+                      <input
+                        type={field.type}
+                        placeholder={field.placeholder}
+                        value={form[field.key as keyof typeof form]}
+                        onChange={e => setForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl font-golos text-sm outline-none"
+                        style={{
+                          background: "rgba(74,124,74,0.06)",
+                          border: "1px solid rgba(74,124,74,0.2)",
+                          color: "var(--green-deep)"
+                        }}
+                      />
+                    </div>
+                  ))}
+                  <div>
+                    <label className="block font-golos text-xs font-medium mb-1 uppercase tracking-wide opacity-60"
+                      style={{ color: "var(--green-deep)" }}>Комментарий</label>
+                    <textarea
+                      placeholder="Пожелания к заказу..."
+                      value={form.comment}
+                      onChange={e => setForm(prev => ({ ...prev, comment: e.target.value }))}
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl font-golos text-sm outline-none resize-none"
+                      style={{ background: "rgba(74,124,74,0.06)", border: "1px solid rgba(74,124,74,0.2)", color: "var(--green-deep)" }}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mb-4 py-3 border-t border-b" style={{ borderColor: "rgba(74,124,74,0.15)" }}>
+                  <span className="font-golos font-medium" style={{ color: "var(--green-deep)" }}>Сумма заказа</span>
+                  <span className="font-cormorant text-xl font-semibold" style={{ color: "var(--green-deep)" }}>{cartTotal} ₽</span>
+                </div>
+                <button
+                  onClick={handleOrder}
+                  disabled={!form.name || !form.phone || !form.address}
+                  className="w-full font-golos font-medium py-4 rounded-full transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "var(--green-deep)", color: "var(--cream)" }}>
+                  Подтвердить заказ
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
